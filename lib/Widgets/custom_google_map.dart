@@ -11,7 +11,8 @@ class CustomGoogleMap extends StatefulWidget {
   
 class _CustomGoogleMapState extends State<CustomGoogleMap> {
   late CameraPosition initialCameraPosition;
-  late GoogleMapController googleMapController;
+  late GoogleMapController changeLocationController;
+  late GoogleMapController googleMapStyleController;
   @override
   void initState() {
     super.initState();
@@ -21,7 +22,7 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
   }
   @override
   void dispose() {
-    googleMapController.dispose();
+    changeLocationController.dispose();
     super.dispose();
   }
   @override
@@ -29,27 +30,39 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     return  Stack(
       children: [
         GoogleMap(
+          //mapType: MapType.normal ,   //default type
           onMapCreated:(controller){
-            googleMapController=controller;
+            googleMapStyleController=controller;
+            initMapStyle();
+            changeLocationController=controller;
           },
             cameraTargetBounds: CameraTargetBounds(
               LatLngBounds(
-                  southwest:const LatLng(30.84251633919994, 28.988978487685046),
-                  northeast:const LatLng(35.096699046946114, 39.400997145628594) ),),
+                  southwest:const LatLng(17.72947819541444, 9.212345938519148),
+                  northeast:const LatLng(35.24741374628074, 39.15299239457197) ),),
             initialCameraPosition: initialCameraPosition),
         Positioned(
            bottom: 16,
             right: 32,
             left: 32,
             child: ElevatedButton(onPressed: (){
-              googleMapController.animateCamera(CameraUpdate.newLatLng(
-                 const LatLng(27.43553057321461, 33.88746908761552)));
+              changeLocationController.animateCamera(CameraUpdate.newLatLng(
+                 const LatLng(31.352676581272963, 32.21456098710738)));
             },
               child:const Text("Change location"),))
       ],
     );
   }
+
+  void  initMapStyle()async{
+    var nightStyle= await DefaultAssetBundle.of(context).
+    loadString('assets/google)map_styles/night_map_style.json');
+    googleMapStyleController.setMapStyle(nightStyle);
+  }
+
 }
+
+
 // zoom ranges levels
 //World wide 0_3
 //country  4_6
