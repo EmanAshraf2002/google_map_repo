@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_map_project/models/place_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
 
 class CustomGoogleMap extends StatefulWidget {
   const CustomGoogleMap({super.key});
@@ -15,14 +16,23 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
   late GoogleMapController changeLocationController;
   late GoogleMapController googleMapStyleController;
   Set<Marker> markers={};
+  Set<Polyline> polyLines={};
+  Set<Polygon> polygons={};
+  Set<Circle> circles={};
+  late Location location;
 
   @override
   void initState() {
     super.initState();
     initialCameraPosition=const CameraPosition(
         target: LatLng(31.22862207487429, 29.954252143930425),
-        zoom: 10);
-    initMarkers();
+        zoom: 11);
+    //initMarkers();
+    //initPolyLines();
+    //initPolygon();
+    //initCircles();
+    location=Location();
+   updateMyLocation();
   }
   @override
   void dispose() {
@@ -43,21 +53,24 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
           onMapCreated:(controller){
             googleMapStyleController=controller;
             initMapStyle();
-            changeLocationController=controller;
+            //changeLocationController=controller;
           },
-          markers: markers,
+          //markers: markers,
+          //polylines: polyLines,
+          polygons: polygons,
+          circles: circles,
           //zoomControlsEnabled: false,
 
         ),
-        Positioned(
-           bottom: 16,
-            right: 32,
-            left: 32,
-            child: ElevatedButton(onPressed: (){
-              changeLocationController.animateCamera(CameraUpdate.newLatLng(
-                 const LatLng(31.352676581272963, 32.21456098710738)));
-            },
-              child:const Text("Change location"),))
+        // Positioned(
+        //    bottom: 16,
+        //     right: 32,
+        //     left: 32,
+            // child: ElevatedButton(onPressed: (){
+            //   changeLocationController.animateCamera(CameraUpdate.newLatLng(
+            //      const LatLng(31.352676581272963, 32.21456098710738)));
+            // },
+            //   child:const Text("Change location"),))
       ],
     );
   }
@@ -81,6 +94,82 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     setState(() {});
   }
 
+  void initPolyLines() {
+    Polyline polyLine=const Polyline(polylineId: PolylineId('1'),
+      width: 5,
+      color: Colors.blue,
+      startCap: Cap.roundCap,
+      points: [
+        LatLng(31.16511342578901, 29.894423547507312),
+        LatLng(31.184646406129676, 29.906327659251936),
+        LatLng(31.208576520878356, 29.90926611062312),
+        LatLng(31.217228052822573, 29.93063012238412),
+      ]);
+    polyLines.add(polyLine);
+  }
+
+  void initPolygon() {
+    Polygon polygon=Polygon(
+      polygonId:const PolygonId("1"),
+      fillColor: Colors.black.withOpacity(.5),
+      strokeWidth: 3,
+      points:const [
+        LatLng(31.184785994931175, 29.906196132305343),
+        LatLng(31.208017069552334, 29.909250071479867),
+        LatLng(31.208576520878356, 29.90926611062312),
+        LatLng(31.206540530734017, 29.939381934571955),
+      ]
+    );
+    polygons.add(polygon);
+  }
+
+  void initCircles() {
+    Circle kushariAboTarekCircle= Circle(circleId:const CircleId("1"),
+      center:  const LatLng(30.050678384356267, 31.236686277815885),
+      fillColor: Colors.black.withOpacity(.5),
+      radius: 5000,
+
+    );
+    circles.add(kushariAboTarekCircle);
+  }
+
+  Future<void> checkAndRequestLocationService() async{
+    var isServiceEnabled=await location.serviceEnabled();
+    if(!isServiceEnabled){
+      isServiceEnabled=await location.requestService();
+      if(!isServiceEnabled){
+        //ToDo:show error message
+      }
+    }
+  }
+
+  Future<bool> checkAndRequestPermission() async{
+    var permissionStatus=await location.hasPermission();
+    if(permissionStatus == PermissionStatus.deniedForever){
+      return false;
+    }
+    if(permissionStatus == PermissionStatus.denied){
+      permissionStatus=await location.requestPermission();
+      if(permissionStatus !=PermissionStatus.granted){
+        return false;
+      }
+    }
+   return true;
+  }
+
+  void getLocationData(){
+    location.onLocationChanged.listen((locationData) { });
+
+  }
+
+  void updateMyLocation() async{
+    await checkAndRequestLocationService();
+   var hasPermission= await checkAndRequestPermission();
+   if(hasPermission){
+     getLocationData();
+   }
+   else{}
+  }
 }
 
 
@@ -90,3 +179,9 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
 //City 10_12
 //streets 13_17
 //buildings 18_20
+
+//Steps for the user location
+//inquire about location service enabled or not from setting
+//request permissions
+//get user location
+//display
