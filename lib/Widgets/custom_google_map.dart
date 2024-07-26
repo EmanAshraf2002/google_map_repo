@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_map_project/services/location_services.dart';
 import 'package:google_map_project/models/place_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -14,24 +15,25 @@ class CustomGoogleMap extends StatefulWidget {
 class _CustomGoogleMapState extends State<CustomGoogleMap> {
   late CameraPosition initialCameraPosition;
   late GoogleMapController changeLocationController;
-  late GoogleMapController googleMapStyleController;
+  GoogleMapController? googleMapController;
   Set<Marker> markers={};
   Set<Polyline> polyLines={};
   Set<Polygon> polygons={};
   Set<Circle> circles={};
-  late Location location;
+  late LocationServices locationServices;
+  bool isFirstCall=true;
 
   @override
   void initState() {
     super.initState();
     initialCameraPosition=const CameraPosition(
         target: LatLng(31.22862207487429, 29.954252143930425),
-        zoom: 11);
+        zoom: 1);
     //initMarkers();
     //initPolyLines();
     //initPolygon();
     //initCircles();
-    location=Location();
+    locationServices=LocationServices();
    updateMyLocation();
   }
   @override
@@ -51,11 +53,11 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
                 northeast:const LatLng(31.24741374628074, 30.15299239457197) ),),
           //mapType: MapType.normal ,   //default type
           onMapCreated:(controller){
-            googleMapStyleController=controller;
+            googleMapController=controller;
             initMapStyle();
             //changeLocationController=controller;
           },
-          //markers: markers,
+          markers: markers,
           //polylines: polyLines,
           polygons: polygons,
           circles: circles,
@@ -78,21 +80,21 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
   void  initMapStyle()async{
     var nightStyle= await DefaultAssetBundle.of(context).
     loadString('assets/google)map_styles/night_map_style.json');
-    googleMapStyleController.setMapStyle(nightStyle);
+    googleMapController!.setMapStyle(nightStyle);
   }
 
-  void initMarkers() async{
-    var customMarkerIcon=await BitmapDescriptor.fromAssetImage(const ImageConfiguration(),'assets/images/marker.png');
-    var myMarker= places.map((PlaceModel) => Marker(
-      markerId: MarkerId(PlaceModel.id.toString()),
-      position: PlaceModel.latLong,
-      infoWindow: InfoWindow(title: PlaceModel.name),
-      icon: customMarkerIcon,
-    )
-    ).toSet();
-    markers.addAll(myMarker);
-    setState(() {});
-  }
+  // void initMarkers() async{
+  //   var customMarkerIcon=await BitmapDescriptor.fromAssetImage(const ImageConfiguration(),'assets/images/marker.png');
+  //   var myMarker= places.map((PlaceModel) => Marker(
+  //     markerId: MarkerId(PlaceModel.id.toString()),
+  //     position: PlaceModel.latLong,
+  //     infoWindow: InfoWindow(title: PlaceModel.name),
+  //     icon: customMarkerIcon,
+  //   )
+  //   ).toSet();
+  //   markers.addAll(myMarker);
+  //   setState(() {});
+  // }
 
   void initPolyLines() {
     Polyline polyLine=const Polyline(polylineId: PolylineId('1'),
@@ -133,40 +135,26 @@ class _CustomGoogleMapState extends State<CustomGoogleMap> {
     circles.add(kushariAboTarekCircle);
   }
 
-  Future<void> checkAndRequestLocationService() async{
-    var isServiceEnabled=await location.serviceEnabled();
-    if(!isServiceEnabled){
-      isServiceEnabled=await location.requestService();
-      if(!isServiceEnabled){
-        //ToDo:show error message
-      }
-    }
-  }
-
-  Future<bool> checkAndRequestPermission() async{
-    var permissionStatus=await location.hasPermission();
-    if(permissionStatus == PermissionStatus.deniedForever){
-      return false;
-    }
-    if(permissionStatus == PermissionStatus.denied){
-      permissionStatus=await location.requestPermission();
-      if(permissionStatus !=PermissionStatus.granted){
-        return false;
-      }
-    }
-   return true;
-  }
-
-  void getLocationData(){
-    location.onLocationChanged.listen((locationData) { });
-
-  }
-
   void updateMyLocation() async{
-    await checkAndRequestLocationService();
-   var hasPermission= await checkAndRequestPermission();
+    await locationServices.checkAndRequestLocationService();
+   var hasPermission= await locationServices.checkAndRequestPermission() ;
    if(hasPermission){
-     getLocationData();
+     locationServices.getRealTimeLocationData((locationData) {
+      if(isFirstCall){
+        var cameraPosition= CameraPosition(target: LatLng(locationData.latitude!,locationData.longitude!),zoom:17);
+        googleMapController?.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+        isFirstCall=false;
+      }
+      else{
+        googleMapController?.animateCamera(CameraUpdate.newLatLng(LatLng(locationData.latitude!,locationData.longitude!),));
+      }
+       var myLocationMarker= Marker(markerId:const MarkerId('My Location Marker'),
+         position: LatLng(locationData.latitude!,locationData.longitude!),
+       );
+       markers.add(myLocationMarker);
+       setState(() {});
+
+     });
    }
    else{}
   }
